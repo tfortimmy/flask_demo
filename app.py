@@ -15,24 +15,37 @@ def predict():
         # import pdb
         # pdb.set_trace()
 
+        # A dict for the output to be stored
         output = {}
         try:
 
+            # the input data
             input_json = request.json
 
+            # extract the model to use
             model_id = input_json['model_id']
+            model = joblib.load(f'models/{model_id}.pkl')
 
-            model = joblib.load(f'{model_id}.pkl')
-
+            # convert the data into a dataframe
             df = pd.DataFrame(input_json['data'])
 
-            predictions = model.predict(df)
+            # TODO check the columns line up
 
+            # get the predictions and scores
+            predictions = model.predict(df)
+            scores = model.predict_proba(df)
+
+            # store the model outputs in the output dict
+            # need to convert the outputs into something json compatible
             output['predictions'] = [int(p) for p in predictions]
+            # take the max score (the one associated with the prediction)
+            output['scores'] = [float(max(s)) for s in scores]
 
         except Exception as e:
+            # If we experience an error then return it as part of the output
             output['error'] = str(e)
 
+        # To return it in flask we need to convert it to json
         return jsonify(output)
 
 
