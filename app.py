@@ -110,9 +110,14 @@ def train():
             # save the model on the server
             joblib.dump(to_save, f'models/{model_id}.pkl')
 
-        except Exception as e:
-            output['error'] = e
+            # the model id so the user can call the model they trained
+            output['model_id'] = model_id
 
+        except Exception as e:
+            # If we experience an error then return it as part of the output
+            output['error'] = str(e)
+
+        # convert the output to json
         return jsonify(output)
 
 
