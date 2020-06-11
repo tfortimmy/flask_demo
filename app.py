@@ -2,10 +2,13 @@ from flask import Flask, request, jsonify
 import pandas as pd
 import joblib
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+
 # start flask
 app = Flask(__name__)
-
-# when the post method detect, then redirect to success function
 
 
 @app.route('/predict', methods=['POST'])
@@ -24,12 +27,17 @@ def predict():
 
             # extract the model to use
             model_id = input_json['model_id']
-            model = joblib.load(f'models/{model_id}.pkl')
+            saved_model = joblib.load(f'models/{model_id}.pkl')
+
+            model = saved_model['model']
+            assert model_id == saved_model['model_id']
+            columns = saved_model['columns']
 
             # convert the data into a dataframe
             df = pd.DataFrame(input_json['data'])
 
-            # TODO check the columns line up
+            # Assert the columns for the input data are the same as for the trained model
+            assert np.all(columns == df.columns), "Columns must match"
 
             # get the predictions and scores
             predictions = model.predict(df)
@@ -49,23 +57,63 @@ def predict():
         return jsonify(output)
 
 
-# @app.route('/train', methods=['POST'])
-# def train():
-#     if request.method == 'POST':
+@app.route('/train', methods=['POST'])
+def train():
+    if request.method == 'POST':
 
-#         output = {}
+        # To send to
+        output = {}
 
-#         try:
-#             input_json = request.json
-#             df = pd.DataFrame(input_json)
+        try:
+            # extract the json
+            input_json = request.json
 
-#             predictions = model.predict(df)
+            # what type of model are we training
+            model_type = input_json['model_type']
 
-#             output['predictions'] = predictions
-#         except Exception as e:
-#             output['error'] = e
+            # extract the data
+            X = pd.DataFrame(input_json['X'])
+            y = pd.DataFrame(input_json['Y'])
 
-#         return jsonify(output)
+            # allow the user to specify added arguments
+            kwargs = input_json.get('kwargs', {})
+
+            # build the model according to the model selection
+            if model_type == 'LogisticRegression':
+                model = LogisticRegression(**kwargs)
+            elif model_type == 'RandomForest':
+                model = RandomForestClassifier(**kwargs)
+            elif model_type == 'DecisionTree':
+                model = DecisionTreeClassifier(**kwargs)
+            elif model_type == 'SVC':
+                # as we want to return probabilities we need this param for the SVC
+                model = SVC(probability=True, **kwargs)
+            else:
+                raise ValueError
+
+            # fit the model
+            model.fit(X, y)
+
+            # the model id is the hexadecimal representation of the hash of the model
+            model_id = hex(hash(model))
+
+            # the columns used to train
+            columns = X.columns
+
+            # save all of the required elements in a dict
+            to_save = {
+                'model_id': model_id,
+                'columns': columns,
+                'model': model
+            }
+
+            # save the model on the server
+            joblib.dump(to_save, f'models/{model_id}.pkl')
+
+        except Exception as e:
+            output['error'] = e
+
+        return jsonify(output)
 
 
 if __name__ == "__main__":
