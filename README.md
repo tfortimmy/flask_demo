@@ -40,3 +40,9 @@ To generate the prediction from a previously trained model you will need:
 This will need to be sent to the application as a json.
 
 The application will then return the predictions and the probabilities for each of the data points sent.
+
+## TODO
+* Add processing for categorical types
+* Add normalisation option for numerical types
+* Add imputation
+* Add Examples to README
