@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
+import numpy as np
 
 # start flask
 app = Flask(__name__)
@@ -14,9 +15,6 @@ app = Flask(__name__)
 @app.route('/predict', methods=['POST'])
 def predict():
     if request.method == 'POST':
-
-        # import pdb
-        # pdb.set_trace()
 
         # A dict for the output to be stored
         output = {}
@@ -45,9 +43,9 @@ def predict():
 
             # store the model outputs in the output dict
             # need to convert the outputs into something json compatible
-            output['predictions'] = [int(p) for p in predictions]
+            output['predictions'] = [p for p in predictions]
             # take the max score (the one associated with the prediction)
-            output['scores'] = [float(max(s)) for s in scores]
+            output['probs'] = [float(max(s)) for s in scores]
 
         except Exception as e:
             # If we experience an error then return it as part of the output
@@ -73,7 +71,7 @@ def train():
 
             # extract the data
             X = pd.DataFrame(input_json['X'])
-            y = pd.DataFrame(input_json['Y'])
+            y = pd.DataFrame(input_json['y'])
 
             # allow the user to specify added arguments
             kwargs = input_json.get('kwargs', {})
